@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Membaca Buku - Tugas Kelompok</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6">
+        <header class="text-center mb-8 border-b pb-4 border-gray-200">
+            <h1 class="text-3xl font-bold text-indigo-600">📚 Book Tracking App</h1>
+            <p class="text-gray-500 mt-1">Tugas Kelompok - Deploy Portainer (Tanpa Database)</p>
+        </header>
+
+        <section class="bg-indigo-50 p-4 rounded-lg mb-8">
+            <h2 class="text-xl font-semibold text-indigo-900 mb-3" id="form-title">Tambah Buku Baru</h2>
+            <form id="book-form" class="space-y-4">
+                <input type="hidden" id="book-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Judul Buku</label>
+                        <input type="text" id="book-title" required class="mt-1 block w-full rounded-md border-gray-300 shadow-xs p-2 bg-white focus:ring-indigo-500 focus:border-indigo-500" placeholder="Contoh: Laskar Pelangi">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Penulis</label>
+                        <input type="text" id="book-author" required class="mt-1 block w-full rounded-md border-gray-300 shadow-xs p-2 bg-white focus:ring-indigo-500 focus:border-indigo-500" placeholder="Contoh: Andrea Hirata">
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="book-status" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                    <label for="book-status" class="ml-2 block text-sm text-gray-900">Saya sudah selesai membaca buku ini</label>
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" id="submit-btn" class="w-full md:w-auto px-6 py-2 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition">Simpan Buku</button>
+                    <button type="button" id="cancel-btn" class="hidden w-full md:w-auto px-6 py-2 bg-gray-400 text-white font-medium rounded-md hover:bg-gray-500 transition">Batal</button>
+                </div>
+            </form>
+        </section>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <section class="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                <h2 class="text-xl font-bold text-yellow-800 mb-4 flex items-center gap-2">
+                    ⏳ Belum Selesai Dibaca (<span id="unread-count">0</span>)
+                </h2>
+                <div id="unread-list" class="space-y-3">
+                    </div>
+            </section>
+
+            <section class="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h2 class="text-xl font-bold text-green-800 mb-4 flex items-center gap-2">
+                    ✅ Sudah Selesai Dibaca (<span id="read-count">0</span>)
+                </h2>
+                <div id="read-list" class="space-y-3">
+                    </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        let books = JSON.parse(localStorage.getItem('books')) || [];
+
+        const bookForm = document.getElementById('book-form');
+        const bookIdInput = document.getElementById('book-id');
+        const bookTitleInput = document.getElementById('book-title');
+        const bookAuthorInput = document.getElementById('book-author');
+        const bookStatusInput = document.getElementById('book-status');
+        const submitBtn = document.getElementById('submit-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+
+        // Render aplikasi pertama kali dijalankan
+        document.addEventListener('DOMContentLoaded', renderBooks);
+
+        // Handle Submit (Create & Update)
+        bookForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = bookIdInput.value;
+            const title = bookTitleInput.value.trim();
+            const author = bookAuthorInput.value.trim();
+            const isCompleted = bookStatusInput.checked;
+
+            if (id) {
+                // UPDATE MODE
+                books = books.map(book => book.id == id ? { ...book, title, author, isCompleted } : book);
+            } else {
+                // CREATE MODE
+                const newBook = {
+                    id: +new Date(),
+                    title,
+                    author,
+                    isCompleted
+                };
+                books.push(newBook);
+            }
+
+            saveAndRender();
+            resetForm();
+        });
+
+        // Simpan ke LocalStorage dan gambar ulang UI
+        function saveAndRender() {
+            localStorage.setItem('books', JSON.stringify(books));
+            renderBooks();
+        }
+
+        // Fungsi menampilkan data (Read)
+        function renderBooks() {
+            const unreadList = document.getElementById('unread-list');
+            const readList = document.getElementById('read-list');
+            
+            unreadList.innerHTML = '';
+            readList.innerHTML = '';
+
+            let unreadCount = 0;
+            let readCount = 0;
+
+            books.forEach(book => {
+                const bookCard = document.createElement('div');
+                bookCard.className = 'bg-white p-4 rounded-md shadow-xs border border-gray-100 flex flex-col justify-between';
+                bookCard.innerHTML = `
+                    <div>
+                        <h3 class="font-bold text-gray-800 text-lg">${book.title}</h3>
+                        <p class="text-sm text-gray-500">Penulis: ${book.author}</p>
+                    </div>
+                    <div class="mt-4 flex gap-2 justify-end border-t pt-2 border-gray-100">
+                        <button onclick="toggleStatus(${book.id})" class="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200">
+                            ${book.isCompleted ? '💥 Belum Selesai' : '✔️ Selesai'}
+                        </button>
+                        <button onclick="editBook(${book.id})" class="text-xs px-2 py-1 rounded bg-amber-100 text-amber-700 hover:bg-amber-200">
+                            ✏️ Edit
+                        </button>
+                        <button onclick="deleteBook(${book.id})" class="text-xs px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200">
+                            🗑️ Hapus
+                        </button>
+                    </div>
+                `;
+
+                if (book.isCompleted) {
+                    readList.appendChild(bookCard);
+                    readCount++;
+                } else {
+                    unreadList.appendChild(bookCard);
+                    unreadCount++;
+                }
+            });
+
+            document.getElementById('unread-count').innerText = unreadCount;
+            document.getElementById('read-count').innerText = readCount;
+
+            if(unreadCount === 0) unreadList.innerHTML = '<p class="text-sm text-gray-400 italic">Tidak ada buku.</p>';
+            if(readCount === 0) readList.innerHTML = '<p class="text-sm text-gray-400 italic">Tidak ada buku.</p>';
+        }
+
+        // Fungsi Hapus (Delete)
+        function deleteBook(id) {
+            if(confirm('Apakah Anda yakin ingin menghapus buku ini?')) {
+                books = books.filter(book => book.id !== id);
+                saveAndRender();
+            }
+        }
+
+        // Fungsi Ganti Status (Update Status Cepat)
+        function toggleStatus(id) {
+            books = books.map(book => book.id === id ? { ...book, isCompleted: !book.isCompleted } : book);
+            saveAndRender();
+        }
+
+        // Fungsi Edit (Load data ke form)
+        function editBook(id) {
+            const book = books.find(book => book.id === id);
+            if (book) {
+                bookIdInput.value = book.id;
+                bookTitleInput.value = book.title;
+                bookAuthorInput.value = book.author;
+                bookStatusInput.checked = book.isCompleted;
+                
+                document.getElementById('form-title').innerText = "Edit Detail Buku";
+                submitBtn.innerText = "Perbarui Buku";
+                cancelBtn.classList.remove('hidden');
+            }
+        }
+
+        // Batal Edit
+        cancelBtn.addEventListener('click', resetForm);
+
+        function resetForm() {
+            bookForm.reset();
+            bookIdInput.value = '';
+            document.getElementById('form-title').innerText = "Tambah Buku Baru";
+            submitBtn.innerText = "Simpan Buku";
+            cancelBtn.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
